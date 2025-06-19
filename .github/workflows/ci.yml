@@ -48,6 +48,10 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
+    
+    - name: Set CI success status
+      if: github.ref == 'refs/heads/master'
+      run: echo "CI passed successfully on master branch"
 
   lint:
     runs-on: ubuntu-latest

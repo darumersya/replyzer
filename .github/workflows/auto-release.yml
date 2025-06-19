@@ -1,0 +1,118 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [ master ]
+  workflow_run:
+    workflows: ["CI"]
+    branches: [ master ]
+    types:
+      - completed
+
+jobs:
+  auto-release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install semantic-release
+      run: |
+        npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23
+    
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    
+    - name: Run semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: semantic-release
+    
+    - name: Get latest tag
+      id: get_tag
+      run: |
+        TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+    
+    - name: Build cross-platform binaries
+      if: steps.get_tag.outputs.tag != 'v0.0.0'
+      run: |
+        VERSION=${{ steps.get_tag.outputs.version }}
+        mkdir -p bin
+        
+        # Linux AMD64
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build \
+          -ldflags "-s -w -X main.version=$VERSION" \
+          -o bin/analyze-repo-linux-amd64 \
+          cmd/analyze-repo/main.go
+        
+        # Linux ARM64
+        GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build \
+          -ldflags "-s -w -X main.version=$VERSION" \
+          -o bin/analyze-repo-linux-arm64 \
+          cmd/analyze-repo/main.go
+        
+        # macOS AMD64
+        GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build \
+          -ldflags "-s -w -X main.version=$VERSION" \
+          -o bin/analyze-repo-darwin-amd64 \
+          cmd/analyze-repo/main.go
+        
+        # macOS ARM64
+        GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build \
+          -ldflags "-s -w -X main.version=$VERSION" \
+          -o bin/analyze-repo-darwin-arm64 \
+          cmd/analyze-repo/main.go
+        
+        # Windows AMD64
+        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build \
+          -ldflags "-s -w -X main.version=$VERSION" \
+          -o bin/analyze-repo-windows-amd64.exe \
+          cmd/analyze-repo/main.go
+        
+        # Windows ARM64
+        GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build \
+          -ldflags "-s -w -X main.version=$VERSION" \
+          -o bin/analyze-repo-windows-arm64.exe \
+          cmd/analyze-repo/main.go
+    
+    - name: Create checksums
+      if: steps.get_tag.outputs.tag != 'v0.0.0'
+      run: |
+        cd bin
+        sha256sum * > checksums.txt
+        cat checksums.txt
+    
+    - name: Upload release assets
+      if: steps.get_tag.outputs.tag != 'v0.0.0'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag }}
+        files: |
+          bin/*
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
