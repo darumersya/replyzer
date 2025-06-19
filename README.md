@@ -130,11 +130,34 @@ internal/
 - `github.com/spf13/viper` - Configuration management
 - `gopkg.in/yaml.v3` - YAML processing
 
+## Releases
+
+This project uses **automated releases** based on [semantic versioning](https://semver.org/):
+
+- **Features** (`feat:`): Minor version bump (1.0.0 → 1.1.0)
+- **Bug fixes** (`fix:`): Patch version bump (1.0.0 → 1.0.1)  
+- **Breaking changes**: Major version bump (1.0.0 → 2.0.0)
+
+Releases are automatically created when changes are merged to the `master` branch and CI passes.
+
+### Version Management
+
+```bash
+# Check current version
+./scripts/version.sh show
+
+# Preview next version
+./scripts/version.sh preview
+
+# Validate commit messages
+./scripts/version.sh validate
+```
+
 ## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+3. Commit your changes using [conventional commits](https://conventionalcommits.org/) (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 

@@ -38,6 +38,16 @@ version requirements, and external dependencies across single projects and monor
 	rootCmd.Flags().StringVar(&component, "component", "", "Analyze specific component only")
 	rootCmd.Flags().StringSliceVar(&exclude, "exclude", []string{}, "Exclude patterns (glob format)")
 
+	// Add version command
+	var versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("replyzer version %s\n", version)
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
