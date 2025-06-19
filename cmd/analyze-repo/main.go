@@ -19,6 +19,7 @@ var (
 	verbose   bool
 	component string
 	exclude   []string
+	version   string = "dev" // Set by build process
 )
 
 func main() {
